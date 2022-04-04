@@ -1,32 +1,39 @@
-from random import randint, random, shuffle
+from random import shuffle
 
 
 class Chromosome:
 
-    MUTATION_PROBABILITY = 0.05
+    def __init__(self, jobs):
+        self.jobs = jobs
+        self.genotype = self.random_genotype()
 
-    def __init__(self, n_tasks):
-        self.genotype = self._random_genotype(n_tasks)
-        self.fitness = self.calc_fitness()
+    def random_genotype(self):
+        jobs_ids = [job.id for job in self.jobs.values() for _ in range(len(job.tasks))]
+        shuffle(jobs_ids)
+        return jobs_ids
 
-    def _random_genotype(self, n_tasks):
-        genotype = list(range(n_tasks))
-        shuffle(genotype)
-        return genotype
+    def to_phenotype(self):
+        phenotype = []
+        counters = {job_id: 0 for job_id in self.jobs.keys()}
 
-    def calc_fitness(self):
-        taken_items = self.get_phenotype()
-        taken_value = 0
-        taken_weight = 0
+        for gen in self.genotype:
+            job = self.jobs[gen]
+            task_no = counters[gen]
+            task = job.tasks[task_no]
+            phenotype.append(task)
+            counters[gen] += 1
 
-        for item in taken_items:
-            taken_value += item.value
-            taken_weight += item.weight
+        return phenotype
 
-        return taken_value if taken_weight <= self.max_weight else 0
-
-
-class JobSchedulingProblem:
-
-    def __init__(self):
+    def get_fitness(self):
         pass
+
+
+class JobShopProblem:
+
+    def __init__(self, jobs):
+        self.jobs = jobs
+
+    def solve(self, n_generation=100, n_chromosomes=100):
+        generation = [Chromosome(self.jobs) for _ in range(n_chromosomes)]
+        return []

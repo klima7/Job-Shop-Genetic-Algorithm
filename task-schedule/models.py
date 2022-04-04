@@ -3,16 +3,16 @@ import pandas as pd
 
 class Job:
 
-    def __init__(self, id_):
-        self.id_ = id_
+    def __init__(self, id):
+        self.id = id
         self.tasks = []
 
     def __repr__(self):
-        return f'Job(id={self.id_}, tasks={self.tasks})'
+        return f'Job(id={self.id}, tasks={self.tasks})'
 
     @staticmethod
     def read_from_excel(path):
-        jobs = []
+        jobs = {}
         excel = pd.read_excel(path, header=None)
         data = excel.values[2:]
 
@@ -21,18 +21,23 @@ class Job:
             job_cols = data[:, i*2:i*2+2]
             for task in job_cols:
                 resource, time = task
-                task = Task(resource, time)
+                task = Task(job, resource, time)
                 job.tasks.append(task)
-            jobs.append(job)
+            jobs[job.id] = job
 
         return jobs
 
 
 class Task:
 
-    def __init__(self, resource, time):
+    def __init__(self, job, resource, time):
+        self.job = job
         self.resource = resource
         self.time = time
 
     def __repr__(self):
-        return f'{self.resource}-{self.time}'
+        return f'{self.job_id}-{self.resource}({self.time})'
+
+    @property
+    def job_id(self):
+        return self.job.id
