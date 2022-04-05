@@ -20,8 +20,8 @@ class Job:
             job = Job(i+1)
             job_cols = data[:, i*2:i*2+2]
             for task in job_cols:
-                resource, time = task
-                task = Task(job, resource, time)
+                machine, time = task
+                task = Task(job, machine, time)
                 job.tasks.append(task)
             jobs[job.id] = job
 
@@ -30,14 +30,25 @@ class Job:
 
 class Task:
 
-    def __init__(self, job, resource, time):
+    def __init__(self, job, machine, time):
         self.job = job
-        self.resource = resource
+        self.machine = machine
         self.time = time
 
     def __repr__(self):
-        return f'{self.job_id}-{self.resource}({self.time})'
+        return f'{self.job_id}-{self.machine}({self.time})'
 
     @property
     def job_id(self):
         return self.job.id
+
+
+class ScheduledTask:
+
+    def __init__(self, *, start_time, end_time=None, task=None):
+        self.start_time = start_time
+        self.task = task
+        self.end_time = end_time if end_time is not None else start_time + self.task.time
+
+    def __repr__(self):
+        return f'{self.start_time}-{self.end_time}|{self.task}'
