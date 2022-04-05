@@ -1,6 +1,6 @@
 import math
 import matplotlib.pyplot as plt
-from random import shuffle, choices, random
+from random import shuffle, choices, random, randrange
 from models import ScheduledTask
 from functools import total_ordering
 
@@ -8,11 +8,10 @@ from functools import total_ordering
 @total_ordering
 class Chromosome:
 
-    def __init__(self, jobs, machines):
+    def __init__(self, jobs, machines, genotype=None):
         self.jobs = jobs
         self.machines = machines
-
-        self.genotype = self._random_genotype()
+        self.genotype = genotype if genotype is not None else self._random_genotype()
         self.fitness = self._get_fitness()
 
     def _random_genotype(self):
@@ -66,7 +65,7 @@ class Chromosome:
                 return scheduled_task
         assert False, "This shouldn't happen"
 
-    def _get_fitness(self):
+    def get_timespan(self):
         scheduled_tasks = self.to_phenotype()
         last_task = scheduled_tasks[1]
 
@@ -76,12 +75,36 @@ class Chromosome:
 
         return last_task.end_time
 
-    def mutate(self):
-        pass
+    def _get_fitness(self):
+        return (3000 / self.get_timespan()) ** 2
 
-    @staticmethod
-    def cross(a, b):
-        return a, b
+    def mutate(self):
+        pos_1 = randrange(0, len(self.genotype))
+        pos_2 = randrange(0, len(self.genotype))
+        new_genotype = self.genotype.copy()
+        new_genotype[pos_1], new_genotype[pos_2] = new_genotype[pos_2], new_genotype[pos_1]
+        return Chromosome(self.jobs, self.machines, genotype=new_genotype)
+
+    def mutate_reverse(self):
+        pos_1 = randrange(0, len(self.genotype)-2)
+        pos_2 = randrange(pos_1+1, len(self.genotype))
+        new_genotype = self.genotype.copy()
+        new_genotype[pos_1:pos_2] = reversed(new_genotype[pos_1:pos_2])
+        return Chromosome(self.jobs, self.machines, genotype=new_genotype)
+
+    @classmethod
+    def cross(cls, a, b):
+        return cls.cross_single(a, b), cls.cross_single(b, a)
+
+    @classmethod
+    def cross_single(cls, a, b):
+        cross_pos = randrange(1, len(a.genotype))
+        child_genotype = a.genotype[:cross_pos]
+        b_genotype = b.genotype.copy()
+        for gen in child_genotype:
+            b_genotype.remove(gen)
+        child_genotype.extend(b_genotype)
+        return cls(a.jobs, a.machines, genotype=child_genotype)
 
     def __lt__(self, other):
         return self.fitness < other.fitness
@@ -89,7 +112,7 @@ class Chromosome:
 
 class JobShopGA:
 
-    def __init__(self, jobs, *, n_generations=100, n_chromosomes=100, n_elite=5, cross_prob=0.3, mutate_prob=0.01):
+    def __init__(self, jobs, *, n_generations=20000, n_chromosomes=100, n_elite=10, cross_prob=0.7, mutate_prob=0.1):
         self.jobs = jobs
         self.n_generations = n_generations
         self.n_chromosomes = n_chromosomes
@@ -106,28 +129,29 @@ class JobShopGA:
         for i in range(self.n_generations):
             self._next_generation()
 
-        best_chromosome = sorted(self.population)[0]
-        scheduled_tasks = best_chromosome.to_phenotype()
-        timespan = best_chromosome.fitness
-        print(timespan)
-        self.plot(scheduled_tasks)
+            if i % 10 == 0:
+                best_chromosome = sorted(self.population, reverse=True)[0]
+                print(f'{i:<10} - {best_chromosome.get_timespan():>10}')
+                if i % 100 == 0:
+                    self.plot(best_chromosome.to_phenotype(), best_chromosome.get_timespan())
+
+        best_chromosome = sorted(self.population, reverse=True)[0]
+        print(best_chromosome.get_timespan())
+        self.plot(best_chromosome.to_phenotype())
         return []
 
     def _next_generation(self):
-        ordered = sorted(self.population)
-        elite = self._elite(ordered)
+        ordered = sorted(self.population, reverse=True)
+        elite = ordered[:self.n_elite]
         selected = self._selection(ordered)
         crossed = self._cross(selected)
         mutated = self._mutate(crossed)
         self.population = [*elite, *mutated]
 
-    def _elite(self, chromosomes):
-        return chromosomes[:self.n_elite]
-
     def _selection(self, chromosomes):
         all_fitness = [chromosome.fitness for chromosome in chromosomes]
         n_selected_chromosomes = self.n_chromosomes - self.n_elite
-        selected_chromosomes = choices(self.population, all_fitness, k=n_selected_chromosomes)
+        selected_chromosomes = choices(chromosomes, all_fitness, k=n_selected_chromosomes)
         return selected_chromosomes
 
     def _cross(self, chromosomes):
@@ -148,19 +172,22 @@ class JobShopGA:
         return crossed
 
     def _mutate(self, chromosomes):
+        mutated = []
         for chromosome in chromosomes:
             mutate = random() < self.mutate_prob
             if mutate:
-                chromosome.mutate()
-        return chromosomes
+                mutated.append(chromosome.mutate())
+            else:
+                mutated.append(chromosome)
+        return mutated
 
-    def plot(self, scheduled_tasks):
+    def plot(self, scheduled_tasks, timespan):
         # chart
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(15, 5))
 
         # constants
-        height = 7
-        space = 3
+        height = 6
+        space = 2
         total_height = height + space
 
         # appearance
@@ -170,6 +197,7 @@ class JobShopGA:
         ax.set_title('Job-Shop Gantt Chart')
         ax.set_xlabel('Time')
         ax.set_ylabel('Machines')
+        ax.set_xlim([0, timespan])
 
         # data
         color_map = plt.cm.get_cmap('hsv', len(self.jobs))
@@ -177,5 +205,11 @@ class JobShopGA:
             machine_periods = [(task.start_time, task.end_time-task.start_time) for task in scheduled_tasks if task.task.machine == machine]
             colors = [color_map(task.task.job_id) for task in scheduled_tasks if task.task.machine == machine]
             ax.broken_barh(machine_periods, (total_height * machine, height), facecolors=colors, edgecolor='black')
+
+        for task in scheduled_tasks:
+            job_id = task.task.job_id
+            y = total_height * task.task.machine + 0.5 * height
+            x = (task.start_time + task.end_time) / 2
+            ax.text(x, y, job_id, fontsize='xx-small', horizontalalignment='center', verticalalignment='center')
 
         plt.show()
