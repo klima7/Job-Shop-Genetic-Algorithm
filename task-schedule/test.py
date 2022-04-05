@@ -1,7 +1,7 @@
 from models import Job
-from genetic import JobShopProblem
+from genetic import JobShopGA
 
 jobs = Job.read_from_excel('tasks.xlsx')
-problem = JobShopProblem(jobs)
-solution = problem.solve()
+ga = JobShopGA(jobs)
+solution = ga.solve()
 print(solution)
