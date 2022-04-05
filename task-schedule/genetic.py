@@ -1,4 +1,5 @@
 import math
+import matplotlib.pyplot as plt
 from random import shuffle
 from models import ScheduledTask, Task
 
@@ -76,7 +77,32 @@ class Chromosome:
         return last_task.end_time
 
     def plot(self):
-        pass
+        # chart
+        tasks = self.to_phenotype()
+        fig, ax = plt.subplots()
+
+        # constants
+        height = 7
+        space = 3
+        total_height = height + space
+
+        # appearance
+        ax.set_yticks([total_height * i + height/2 for i in self.machines])
+        ax.set_yticklabels(self.machines)
+        ax.yaxis.grid(color='gray', linestyle='dashed')
+        ax.set_title('Job-Shop Gantt Chart')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Machines')
+        ax.set_xlim(left=0, right=self.get_fitness())
+
+        # data
+        color_map = plt.cm.get_cmap('hsv', len(self.jobs))
+        for machine in self.machines:
+            machine_periods = [(task.start_time, task.end_time-task.start_time) for task in tasks if task.task.machine == machine]
+            colors = [color_map(task.task.job_id) for task in tasks if task.task.machine == machine]
+            ax.broken_barh(machine_periods, (total_height * machine, height), facecolors=colors, edgecolor='black')
+
+        plt.show()
 
 
 class JobShopProblem:
@@ -87,6 +113,7 @@ class JobShopProblem:
     def solve(self, n_generation=100, n_chromosomes=100):
         generation = [Chromosome(self.jobs) for _ in range(n_chromosomes)]
         tasks = generation[0].to_phenotype()
-        temp = [task for task in tasks if task.task.job_id == 2]
+        temp = [task for task in tasks if task.task.machine == 1]
         print(sorted(temp, key=lambda t: t.start_time))
+        generation[0].plot()
         return []
