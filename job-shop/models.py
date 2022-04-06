@@ -21,14 +21,3 @@ class Task:
     @property
     def job_id(self):
         return self.job.id
-
-
-class ScheduledTask:
-
-    def __init__(self, *, start_time, end_time=None, task=None):
-        self.start_time = start_time
-        self.task = task
-        self.end_time = end_time if end_time is not None else start_time + self.task.time
-
-    def __repr__(self):
-        return f'{self.start_time}-{self.end_time}|{self.task}'
