@@ -112,15 +112,15 @@ class Chromosome:
 
 class JobShopGA:
 
-    def __init__(self, jobs, *, n_generations=20000, n_chromosomes=100, n_elite=10, cross_prob=0.7, mutate_prob=0.1):
-        self.jobs = jobs
+    def __init__(self, jobs, *, n_generations=20000, n_chromosomes=200, n_elite=10, cross_prob=0.7, mutate_prob=0.2):
+        self.jobs = {job.id: job for job in jobs}
         self.n_generations = n_generations
         self.n_chromosomes = n_chromosomes
         self.n_elite = n_elite if (n_chromosomes - n_elite) % 2 == 0 else n_elite + 1
         self.cross_prob = cross_prob
         self.mutate_prob = mutate_prob
 
-        self.machines = list({task.machine for job in jobs.values() for task in job.tasks})
+        self.machines = list({task.machine for job in jobs for task in job.tasks})
         self.population = None
 
     def solve(self):
@@ -181,7 +181,7 @@ class JobShopGA:
                 mutated.append(chromosome)
         return mutated
 
-    def plot(self, scheduled_tasks, timespan):
+    def plot(self, scheduled_tasks, timespan, numbers=False):
         # chart
         fig, ax = plt.subplots(figsize=(15, 5))
 
@@ -206,10 +206,11 @@ class JobShopGA:
             colors = [color_map(task.task.job_id) for task in scheduled_tasks if task.task.machine == machine]
             ax.broken_barh(machine_periods, (total_height * machine, height), facecolors=colors, edgecolor='black')
 
-        for task in scheduled_tasks:
-            job_id = task.task.job_id
-            y = total_height * task.task.machine + 0.5 * height
-            x = (task.start_time + task.end_time) / 2
-            ax.text(x, y, job_id, fontsize='xx-small', horizontalalignment='center', verticalalignment='center')
+        if numbers:
+            for task in scheduled_tasks:
+                job_id = task.task.job_id
+                y = total_height * task.task.machine + 0.5 * height
+                x = (task.start_time + task.end_time) / 2
+                ax.text(x, y, job_id, fontsize='xx-small', horizontalalignment='center', verticalalignment='center')
 
         plt.show()

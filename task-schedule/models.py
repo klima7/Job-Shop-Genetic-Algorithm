@@ -1,8 +1,3 @@
-import math
-
-import pandas as pd
-
-
 class Job:
 
     def __init__(self, id):
@@ -11,25 +6,6 @@ class Job:
 
     def __repr__(self):
         return f'Job(id={self.id}, tasks={self.tasks})'
-
-    @staticmethod
-    def read_from_excel(path, n_jobs=math.inf):
-        jobs = {}
-        excel = pd.read_excel(path, header=None)
-        data = excel.values[2:]
-
-        for i in range(data.shape[1]//2):
-            if i >= n_jobs:
-                break
-            job = Job(i+1)
-            job_cols = data[:, i*2:i*2+2]
-            for task in job_cols:
-                machine, time = task
-                task = Task(job, machine, time)
-                job.tasks.append(task)
-            jobs[job.id] = job
-
-        return jobs
 
 
 class Task:
