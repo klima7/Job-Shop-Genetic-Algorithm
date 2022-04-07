@@ -39,7 +39,7 @@ if __name__ == '__main__':
     print('Lower boundary:', lower_boundary)    # 2073
 
     # 2074
-    ga1 = JobShopGA(jobs, n_chromosomes=200, n_elite=10, cross_prob=0.7, mutate_prob=0.2, max_no_change_gens=200)
+    ga1 = JobShopGA(jobs, n_chromosomes=200, n_elite=10, cross_prob=0.7, mutate_prob=0.2, max_no_change_gens=100)
 
     # 2093 (210 generations)
     ga2 = JobShopGA(jobs, n_chromosomes=100, n_elite=4, cross_prob=0.7, mutate_prob=0.2, max_no_change_gens=100)
